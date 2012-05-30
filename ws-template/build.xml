@@ -1,0 +1,167 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<project name='ws-demo' default='help' basedir='.'>
+
+	<!-- ========================================= -->
+
+	<target name='help'>
+		<echo>
+			Web Service - template for creating projects
+			
+			Requires:
+				1. Axis2 (built against v1.5.x)
+				2. Tomcat (1.6.x or 1.7.x)
+			
+			Build Notes:
+				1. Build server and deploy before building the client as
+				   it depends on the service (.aar) for the WSDL.
+				2. Modify properties axis2.home, tomcat.home, and wsdl to 
+				   your environment.
+			
+			Primary Targets:
+		    	0. Build: all
+				1. Server: deploy
+				2. Client: demo
+		</echo>
+	</target>
+
+	<!-- ========================================= -->
+
+	<target name='init'>
+		<property name='resources.dir' value='${basedir}/resources' />
+		<property name='build.dir' value='${basedir}/build' />
+		<property name='service.aar' value='${build.dir}/Demo.aar' />
+
+		<property name='wsdl' value='resources/Demo.wsdl' />
+
+		<!-- installation specific -->
+		<property name='axis2.home' value='/Users/gash/Developer/apache/axis/axis2-1.5.1' />
+		<property name='junit.jar' value='/Users/gash/Developer/junit-4.8.2.jar' />
+		<property name='tomcat.home' value='/usr/local/tomcat' />
+
+		<path id='build.classpath'>
+			<pathelement location='${basedir}/classes' />
+			<pathelement location='${build.dir}/service' />
+			<pathelement location='${build.dir}/generated/classes' />
+			<pathelement location='${junit.jar}' />
+			<fileset dir='${axis2.home}/lib'>
+				<include name='**/*.jar' />
+			</fileset>
+		</path>
+	</target>
+
+	<!-- ========================================= -->
+
+	<target name='clean' depends='init'>
+		<delete dir='${build.dir}' />
+		<delete dir='${basedir}/classes' />
+		<mkdir dir='${basedir}/classes' />
+	</target>
+
+	<!-- ========================================= -->
+
+	<target name='all' depends='clean,wsdl,compile.wsdl,compile.service,aar'>
+		<echo>Deployment to tomcat is separate: ant deploy</echo>
+		<echo>scp ${service.aar} gash@centosvr:/opt/apache/tomcat/webapps/axis2/WEB-INF/services</echo>
+	</target>
+
+	<!-- ========================================= -->
+	<target name='compile.service' depends='init'>
+		<mkdir dir='${build.dir}/service' />
+		<javac debug='on' fork='true' destdir='${build.dir}/service' srcdir='${basedir}/src' classpathref='build.classpath'>
+		</javac>
+	</target>
+
+	<!-- ========================================= -->
+	<!-- see http://ws.apache.org/axis2/tools/1_4/CodegenToolReference.html -->
+
+	<target name="wsdl" depends='init'>
+		<delete dir='${build.dir}/generated' />
+		<mkdir dir='${build.dir}/generated' />
+		<mkdir dir='${build.dir}/generated/classes' />
+		<copy todir='${build.dir}/generated/classes' file='${basedir}/resources/log4j.properties' />
+		<java classname="org.apache.axis2.wsdl.WSDL2Java">
+			<arg value="-uri" />
+			<arg value="${wsdl}" />
+			<arg value="-ss" />
+			<arg value="-ssi" />
+			<arg value="-g" />
+			<arg value="-t" />
+			<arg value="-sd" />
+			<arg value="-p" />
+			<arg value="ws.demo" />
+			<arg value="-o" />
+			<arg value="${build.dir}/generated" />
+			<arg value="-f" />
+			<classpath refid="build.classpath" />
+		</java>
+	</target>
+
+	<!-- ========================================= -->
+
+	<target name='compile.wsdl' depends='init'>
+		<mkdir dir='${build.dir}/generated/classes' />
+		<javac debug='on' fork='true' destdir='${build.dir}/generated/classes' srcdir='${build.dir}/generated' classpathref='build.classpath'>
+		</javac>
+	</target>
+
+	<target name='compile.demo' depends='init'>
+		<javac debug='on' fork='true' destdir='${basedir}/classes' srcdir='${basedir}/src' classpathref='build.classpath'>
+		</javac>
+	</target>
+
+	<!-- ========================================= -->
+
+	<target name='aar' depends='compile.wsdl'>
+
+		<!--
+		<copy todir='${build.dir}/service'>
+			<fileset dir='${basedir}/resources'>
+				<include name='**/*' />
+			</fileset>
+		</copy>
+		-->
+
+		<!-- generated classes from wsdl2java -->
+		<copy todir='${build.dir}/service'>
+			<fileset dir='${build.dir}/generated/classes'>
+				<include name='**/*' />
+			</fileset>
+		</copy>
+
+		<!-- our server implementation -->
+		<copy todir='${build.dir}/service'>
+			<fileset dir='${basedir}/classes'>
+				<include name='**/*' />
+			</fileset>
+		</copy>
+
+		<mkdir dir='${build.dir}/service/META-INF' />
+		<copy todir='${build.dir}/service/META-INF' file='${build.dir}/generated/services.xml' />
+		<copy todir='${build.dir}/service/META-INF' file='${build.dir}/generated/Demo.wsdl' />
+
+		<!-- override the services.xml with the correct implementation of the service -->
+		<replace file="${build.dir}/service/META-INF/services.xml" token="DemoSkeleton" value="DemoServer" />
+
+		<jar compress='false' filesonly='true' destfile='${service.aar}'>
+			<fileset dir='${build.dir}/service'>
+				<include name='**/*' />
+			</fileset>
+		</jar>
+	</target>
+
+	<!-- ========================================= -->
+
+	<target name='deploy' depends='aar'>
+		<copy todir='${tomcat.home}/webapps/axis2/WEB-INF/services' file='${service.aar}' />
+	</target>
+
+
+	<!-- ========================================= -->
+
+	<target name='demo' depends='compile.demo'>
+		<java fork='yes' maxmemory='512m' classname='ws.demo.client.Client'>
+			<classpath refid='build.classpath' />
+		</java>
+	</target>
+
+</project>

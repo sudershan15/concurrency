@@ -1,0 +1,90 @@
+<?xml version="1.0"?>
+<project name="Gossip point-to-point" basedir="." default="build">
+
+	<target name="init">
+		<property name="src.dir" location="${basedir}/src" />
+		<property name="build.dir" location="${basedir}/classes" />
+		<property name="lib.dir" location="${basedir}/lib" />
+		<property name="config.dir" location="${basedir}/config" />
+
+		<path id="project.classpath">
+			<pathelement location="${build.dir}" />
+			<fileset dir="${lib.dir}">
+				<include name="*.jar" />
+			</fileset>
+		</path>
+	</target>
+
+	<target name="clean" depends="init">
+		<delete dir="${build.dir}" />
+	</target>
+
+	<target name="build" depends="init">
+		<mkdir dir="${build.dir}" />
+		<javac destdir="${build.dir}" debug="true" failonerror="true">
+			<src path="${src.dir}" />
+			<classpath refid="project.classpath" />
+		</javac>
+	</target>
+
+	<target name="startA" depends="build">
+		<copy file="${basedir}/conf/log4j.properties" todir="${build.dir}" />
+		<java fork="yes" classname="gash.gossip.demo.PointA">
+			<classpath>
+				<pathelement location="${build.dir}" />
+				<fileset dir="${lib.dir}">
+					<include name="*.jar" />
+				</fileset>
+			</classpath>
+		</java>
+	</target>
+
+	<target name="startB" depends="build">
+		<copy file="${basedir}/conf/log4j.properties" todir="${build.dir}" />
+		<java fork="yes" classname="gash.gossip.demo.PointB">
+			<classpath>
+				<pathelement location="${build.dir}" />
+				<fileset dir="${lib.dir}">
+					<include name="*.jar" />
+				</fileset>
+			</classpath>
+		</java>
+	</target>
+
+	<target name="demoDirect" depends="build">
+		<copy file="${basedir}/conf/log4j.properties" todir="${build.dir}" />
+		<java fork="yes" classname="gash.gossip.demo.Direct">
+			<classpath>
+				<pathelement location="${build.dir}" />
+				<fileset dir="${lib.dir}">
+					<include name="*.jar" />
+				</fileset>
+			</classpath>
+		</java>
+	</target>
+
+	<target name="demoRandom" depends="build">
+		<copy file="${basedir}/conf/log4j.properties" todir="${build.dir}" />
+		<java fork="yes" classname="gash.gossip.demo.Random">
+			<classpath>
+				<pathelement location="${build.dir}" />
+				<fileset dir="${lib.dir}">
+					<include name="*.jar" />
+				</fileset>
+			</classpath>
+		</java>
+	</target>
+
+	<target name="demoBC" depends="build">
+		<copy file="${basedir}/conf/log4j.properties" todir="${build.dir}" />
+		<java fork="yes" classname="gash.gossip.demo.Broadcast">
+			<classpath>
+				<pathelement location="${build.dir}" />
+				<fileset dir="${lib.dir}">
+					<include name="*.jar" />
+				</fileset>
+			</classpath>
+		</java>
+	</target>
+
+</project>
